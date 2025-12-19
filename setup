@@ -1,0 +1,9 @@
+python>=3.10e
+sapien
+matplotlib
+mplib
+numpy=numpy-1.26.4
+scipy
+# Reinstall mplib and its dependencies
+pip uninstall mplib -y
+pip install mplib --no-cache-dir
