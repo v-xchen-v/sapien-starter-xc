@@ -1,0 +1,3 @@
+[submodule "robot_descriptions_msra"]
+	path = robot_descriptions_msra
+	url = https://github.com/msra-sim/robot_descriptions.git
