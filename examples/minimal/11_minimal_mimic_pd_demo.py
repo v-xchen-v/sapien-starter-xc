@@ -90,6 +90,32 @@ def parse_mimic_map_from_urdf(urdf_path: str):
     return mimic_map
 
 
+def set_master_joint_with_mimic(
+    master_joint,  # joint object
+    master_target: float,
+    mimic_pairs: list,
+):
+    """
+    Set the master joint's PD target and automatically apply mimic mapping rules to all mimic joints.
+    
+    Args:
+        master_joint: The master joint object to control
+        master_target: Target position (qpos) for the master joint
+        mimic_pairs: List of tuples (mimic_joint, master_joint, mimic_qidx, master_qidx, mult, offs)
+                     where mimic_target = mult * master_target + offs
+                     Note: mimic_joint and master_joint should be joint objects
+    """
+    # Set the master joint target
+    master_joint.set_drive_target(master_target)
+    
+    # Apply mimic rules: mimic_target = mult * master_target + offset
+    for mimic_joint, master_jnt, mimic_qidx, master_qidx, mult, offs in mimic_pairs:
+        # Only apply if this mimic joint is controlled by our master joint
+        if master_jnt == master_joint:
+            mimic_target = mult * master_target + offs
+            mimic_joint.set_drive_target(float(mimic_target))
+
+
 def main():
     # 1) Write URDF to a temp file
     tmp_dir = tempfile.mkdtemp(prefix="sapien_mimic_demo_")
@@ -170,7 +196,8 @@ def main():
             print(f"[WARN] mimic pair skipped (no dof index): {mimic_jname} <- {master_jname}")
             continue
         mimic_pairs.append(
-            (mimic_jname, master_jname, name_to_qidx[mimic_jname], name_to_qidx[master_jname], mult, offs)
+            (name_to_joint[mimic_jname], name_to_joint[master_jname], 
+             name_to_qidx[mimic_jname], name_to_qidx[master_jname], mult, offs)
         )
 
     print("[INFO] Active 1-DoF joints:", active_joint_names)
@@ -191,14 +218,8 @@ def main():
         # Master target (radians)
         master_target = 0.6 * math.sin(2.0 * math.pi * 0.5 * t)  # 0.5 Hz
 
-        # 1) Set master PD target
-        master_joint.set_drive_target(master_target)
-
-        # 2) Enforce mimic targets BEFORE stepping
-        #    mimic_target = mult * master_qpos + offset  (or mult * master_target, both ok; here use target)
-        for mimic_jname, master_jname, mimic_qidx, master_qidx, mult, offs in mimic_pairs:
-            mimic_target = mult * master_target + offs
-            name_to_joint[mimic_jname].set_drive_target(float(mimic_target))
+        # Set master joint and apply mimic rules using the extracted method
+        set_master_joint_with_mimic(master_joint, master_target, mimic_pairs)
 
         scene.step()
 
