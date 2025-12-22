@@ -1,9 +1,15 @@
-python>=3.10e
+python>=3.10 recommended
+```
+conda create -n sapien python=3.10
+```
+
 sapien
 matplotlib
+scipy
+
+
 mplib
 numpy=numpy-1.26.4
-scipy
 # Reinstall mplib and its dependencies
 pip uninstall mplib -y
 pip install mplib --no-cache-dir
