@@ -90,6 +90,40 @@ def parse_mimic_map_from_urdf(urdf_path: str):
     return mimic_map
 
 
+def generate_mimic_pairs(mimic_map: dict, joints: list):
+    """
+    Generate mimic pairs from the mimic map, converting names to joint objects and indices.
+    
+    Args:
+        mimic_map: dict[mimic_joint_name] = (master_joint_name, multiplier, offset)
+        joints: List of joint objects from the robot
+        
+    Returns:
+        List of tuples (mimic_joint, master_joint, mimic_qidx, master_qidx, mult, offs)
+        where each element contains joint objects and their corresponding indices
+    """
+    # Build name -> joint and name -> qpos index mappings
+    name_to_joint = {j.get_name(): j for j in joints}
+    name_to_qidx = {}
+    cursor = 0
+    for j in joints:
+        dof = int(j.get_dof())
+        if dof > 0:
+            name_to_qidx[j.get_name()] = cursor
+            cursor += dof
+    
+    mimic_pairs = []
+    for mimic_jname, (master_jname, mult, offs) in mimic_map.items():
+        if mimic_jname not in name_to_qidx or master_jname not in name_to_qidx:
+            print(f"[WARN] mimic pair skipped (no dof index): {mimic_jname} <- {master_jname}")
+            continue
+        mimic_pairs.append(
+            (name_to_joint[mimic_jname], name_to_joint[master_jname], 
+             name_to_qidx[mimic_jname], name_to_qidx[master_jname], mult, offs)
+        )
+    return mimic_pairs
+
+
 def set_master_joint_with_mimic(
     master_joint,  # joint object
     master_target: float,
@@ -148,22 +182,8 @@ def main():
 
     robot.set_name("mimic_demo_robot")
 
-    # 5) Build joint name -> joint object and -> dof index
+    # 5) Get joints
     joints = robot.get_joints()
-
-    name_to_joint = {j.get_name(): j for j in joints}
-    # For 1-DoF joints, we also want their qpos index in the articulation qpos vector
-    # SAPIEN provides joint.get_dof() and joint.get_qpos_index() in many builds;
-    # if not available, we compute indices by scanning dofs.
-    #
-    # We'll do a robust method: accumulate dof sizes in joint order.
-    name_to_qidx = {}
-    cursor = 0
-    for j in joints:
-        dof = int(j.get_dof())
-        if dof > 0:
-            name_to_qidx[j.get_name()] = cursor
-            cursor += dof
 
     # 6) Set PD drives for joints (including mimic joint)
     # Tune these as you like:
@@ -171,45 +191,49 @@ def main():
     damping = 20.0
     force_limit = 50.0
 
-    # We only care about the two finger joints here, but you can apply to all active joints
-    active_joint_names = [n for n in name_to_qidx.keys()]  # all 1-DoF joints
-
-    for jname in active_joint_names:
-        j = name_to_joint[jname]
-        # Drive mode default is position-based PD in many builds; we set properties explicitly.
-        # Some SAPIEN versions have signature: set_drive_property(stiffness, damping, force_limit, mode)
-        # Others: set_drive_property(stiffness, damping, force_limit)
-        try:
-            j.set_drive_property(stiffness, damping, force_limit)
-        except TypeError:
-            # Fallback for older signature
-            j.set_drive_property(stiffness, damping, force_limit, "force")
-        # Initialize targets at current position to avoid impulse
-        qpos = robot.get_qpos()
-        if jname in name_to_qidx:
-            j.set_drive_target(float(qpos[name_to_qidx[jname]]))
+    # Apply to all active joints (those with DoF > 0)
+    qpos = robot.get_qpos()
+    qpos_idx = 0
+    for j in joints:
+        dof = int(j.get_dof())
+        if dof > 0:
+            # Drive mode default is position-based PD in many builds; we set properties explicitly.
+            # Some SAPIEN versions have signature: set_drive_property(stiffness, damping, force_limit, mode)
+            # Others: set_drive_property(stiffness, damping, force_limit)
+            try:
+                j.set_drive_property(stiffness, damping, force_limit)
+            except TypeError:
+                # Fallback for older signature
+                j.set_drive_property(stiffness, damping, force_limit, "force")
+            # Initialize targets at current position to avoid impulse
+            j.set_drive_target(float(qpos[qpos_idx]))
+            qpos_idx += dof
 
     # 7) Convenience: precompute mimic joint indices and master indices
-    mimic_pairs = []
-    for mimic_jname, (master_jname, mult, offs) in mimic_map.items():
-        if mimic_jname not in name_to_qidx or master_jname not in name_to_qidx:
-            print(f"[WARN] mimic pair skipped (no dof index): {mimic_jname} <- {master_jname}")
-            continue
-        mimic_pairs.append(
-            (name_to_joint[mimic_jname], name_to_joint[master_jname], 
-             name_to_qidx[mimic_jname], name_to_qidx[master_jname], mult, offs)
-        )
+    mimic_pairs = generate_mimic_pairs(mimic_map, joints)
 
+    active_joint_names = [j.get_name() for j in joints if j.get_dof() > 0]
     print("[INFO] Active 1-DoF joints:", active_joint_names)
     print("[INFO] Mimic pairs resolved:", mimic_pairs)
 
     # 8) Simulation loop: command master joint target, then enforce mimic target each step
     # We'll drive left_finger_joint with a sinusoid, and right_finger_joint follows via mimic.
     master_name = "left_finger_joint"
+    name_to_joint = {j.get_name(): j for j in joints}
+    
     if master_name not in name_to_joint:
         raise RuntimeError(f"Expected joint '{master_name}' not found. Joints: {list(name_to_joint.keys())}")
 
     master_joint = name_to_joint[master_name]
+
+    # For printing, build qpos index mapping
+    name_to_qidx = {}
+    cursor = 0
+    for j in joints:
+        dof = int(j.get_dof())
+        if dof > 0:
+            name_to_qidx[j.get_name()] = cursor
+            cursor += dof
 
     steps = 240 * 5  # 5 seconds
     t0 = time.time()
