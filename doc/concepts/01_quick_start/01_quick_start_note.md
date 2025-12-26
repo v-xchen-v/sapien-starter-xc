@@ -104,7 +104,6 @@ This phase answers one question:
 You use Sapien API to **construct a physical world**:
 - **Robot modeling**
    - assemble or load URDF
-   - define links, joints, limits
    - configure joint drives (PD gain, control mode)
    - handle special joints (fixed, mimic)
 - **Scene Construction**
@@ -115,6 +114,8 @@ You use Sapien API to **construct a physical world**:
   - attach cameras to link or the world
   - define intrinsics/extrinsics
   - decide render/update timing
+
+This phase defines what exists and how it behaves physically.
 
 If you are building reusable framework, mentioned that this phase's work belongs to **infrastructure layer**, should be **resuable** across multiple tasks.
 
@@ -192,8 +193,6 @@ Many robots are already carefully modeled, tuned, and tested.
   - official URDFs or CAD-derived model
   - usually have accurate kinematics and dimensions
   - often require minor cleanup (inertia, collision, gains)
-
-Reusing an existing robto model lets you focus on behavior, not model debugging.
 
 ---
 
