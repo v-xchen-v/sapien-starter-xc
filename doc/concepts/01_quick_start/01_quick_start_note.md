@@ -90,17 +90,127 @@ SAPIEN provides APIs to build physical simulation environments. It is a good fit
   - reusable robot and scene templates
   - task-agnostic control interfaces
 
-If you mainly want ready-made tasks and benchmarks, a higher-level framework (e.g., Maniskill) maybe more convinient.
+If you mainly want ready-made tasks and benchmarks, a higher-level framework built based on Sapien(e.g., Maniskill, RoboTwin) maybe more convinient.
 
 ---
 
 ## Workflow: From building simulation world to task logic
 Your work naturally splits into two phases.
 ### Phase 1: Build the sim world (SAPIEN’s responsibility + your modeling work)
-All of this answers one question:
+This phase answers one question:
 
 > “**What exists in the world, and how does it behave physically?**”
+
+You use Sapien API to **construct a physical world**:
+- **Robot modeling**
+   - assemble or load URDF
+   - define links, joints, limits
+   - configure joint drives (PD gain, control mode)
+   - handle special joints (fixed, mimic)
+- **Scene Construction**
+   - create ground, table, static props
+   - add movable objects and collision shapes
+   - configura gravity, timestep, solver for contact stability
+- **Sensor modeling**
+  - attach cameras to link or the world
+  - define intrinsics/extrinsics
+  - decide render/update timing
+
+If you are building reusable framework, mentioned that this phase's work belongs to **infrastructure layer**, should be **resuable** across multiple tasks.
+
+
 ### Phase 2: Build task/app logic (what you want the robot to do)
 This phase answers a different question:
 
 > “**Given this world, what problem am I solving?**”
+
+Once the world exists, you write logic that **uses** it:
+- define **what robot should**
+  - e.g., grasp an object on the ground
+- read observations
+  - joint states, object poses, sensor images
+- compute actions
+  - task logicm motion planning, IL, or a learned policy
+- define task semantics
+  - goal conditions (object lifted, placed, opened)
+  - success/failure criteria
+  - optional reward or progress metrics
+  
+If you are building reusable framework, mentioned that this phase's work belongs to **behaviour layer**, in framework like ManiSkill, this layer is called a **Task** or [**Environment**](https://github.com/haosulab/ManiSkill/blob/main/mani_skill/envs/scenes/base_env.py).
+
+### Putting it together
+Conceptionally:
+```
+Build the world (once)
+  ├── robot model
+  ├── scene setup
+  └── sensors
+        ↓
+Run tasks on the world (many times)
+  ├── observe
+  ├── decide action
+  ├── step physics
+  └── check success
+```
+Or, in one sentence:
+
+> **SAPIEN builds the world.**
+> 
+> **Your code builds behaviors and tasks on top of that world.**
+
+### Practical mental shortcut
+
+- **SAPIEN**: “How does the world work?”
+
+- **Scene setup / modeling**: “What exists?”
+
+- **Task / app logic**: “What should the robot do?”
+  
+Keeping these concerns separate is the key to building reusable robots, reusable scenes, and many tasks with minimal duplication.
+
+---
+
+## Reuse existing robots and objects whenever possible
+Before modeling everything yourself, if is worth checking whether **robots or objects are already modeled by others**.
+
+If a robot or object already exists and matches your needs, **using it directly will save huge amount of effort** and help you avoid many subtle bugs (bad inertia, unstable joints, wrong collision shapes, etc)
+
+---
+
+### Reusing robot models
+Many robots are already carefully modeled, tuned, and tested.
+- **Sapien built-in robots**
+  - ready-to-use articulation assets
+  - good for prototyping controllers and physical behavior
+- **Maniskill built-in robots**
+  - robots comes with:
+    - validated URDFs
+    - stable PD gains
+    - consistent control interfaces
+  - ideal for RL/IL and task benchmarking
+- **Robot descriptions from manufacturers**
+  - official URDFs or CAD-derived model
+  - usually have accurate kinematics and dimensions
+  - often require minor cleanup (inertia, collision, gains)
+
+Reusing an existing robto model lets you focus on behavior, not model debugging.
+
+---
+
+### Reusing object models
+Object modeling is just as important as robot modeling.
+
+Instead of creating meshes and collision from scratch, prefer curated datasets:
+- **Public object datasets with**:
+  - clean meshes
+  - collision geometry
+  - real-world consistent scale and mass
+  - stable contacts
+  - reproducibility across tasks and simulators
+---
+
+### Recommended mindset
+
+> Only model what you must.
+>
+> Reuse what already works.
