@@ -1,0 +1,7 @@
+- texture keep the frist 1/100 of original
+- rm embodiment
+- object
+  - keep first 10 of robotwin-od
+  - keep first 1 objvarse
+  - rm others
+- other keep same
