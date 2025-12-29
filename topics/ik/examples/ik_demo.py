@@ -9,6 +9,10 @@ robot = loader.load("robot_descriptions/Panda/panda.urdf")
 # Create Pinocchio model for IK computation
 model = robot.create_pinocchio_model()
 
+model.compute_forward_kinematics([0.0] * len(robot.get_active_joints()))  # Optional: compute FK at neutral pose
+pose0 = model.get_link_pose(9)  # Example: link index 9 for Panda end-effector
+print(f"End-effector initial position: {pose0.p}, orientation: {pose0.q}")
+
 # Define target pose (position + quaternion)
 target_pose = sapien.Pose([0.4, 0.0, 0.5], [0, 0, 0, 1])
 
