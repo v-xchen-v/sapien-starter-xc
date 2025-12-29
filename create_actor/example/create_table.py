@@ -60,7 +60,7 @@ def create_table(
     # Add visual with texture or solid color
     if texture_id is not None:
         # Load texture from file
-        texturepath = f"./assets/background_texture/{texture_id}.png"
+        texturepath = f"./shared/assets/robotwin_od/background_texture/{texture_id}.png"
         texture2d = sapien.render.RenderTexture2D(texturepath)
         material = sapien.render.RenderMaterial()
         material.set_base_color_texture(texture2d)
@@ -120,7 +120,8 @@ if __name__ == "__main__":
         color=(0.8, 0.6, 0.4),
         name="my_table",
         is_static=True,
-        texture_id=None  # Or specify a texture ID like "wood_texture"
+        # texture_id=None  # Or specify a texture ID like "wood_texture"
+        texture_id="seen/0"
     )
     
     print(f"Created table: {table.name}")
