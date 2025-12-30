@@ -1,3 +1,8 @@
+# Ref: https://github.com/RoboTwin-Platform/RoboTwin/blob/main/envs/robot/planner.py
+# Adapted from the RoboTwin codebase
+# - Removed not worked SapienPlanner, use MplibPlanner instead
+# Tested with mplib 0.2.1 and sapien 3.0.2
+
 import mplib
 import numpy as np
 import numpy as np
