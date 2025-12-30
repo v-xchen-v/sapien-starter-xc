@@ -2,7 +2,6 @@ import mplib
 import numpy as np
 import numpy as np
 import toppra as ta
-from mplib.sapien_utils import SapienPlanner, SapienPlanningWorld
 import transforms3d as t3d
 
 
@@ -25,19 +24,15 @@ class MplibPlanner:
         links = [link.get_name() for link in robot_entity.get_links()]
         joints = [joint.get_name() for joint in robot_entity.get_active_joints()]
 
-        if scene is None:
-            self.planner = mplib.Planner(
-                urdf=urdf_path,
-                srdf=srdf_path,
-                move_group=move_group,
-                user_link_names=links,
-                user_joint_names=joints,
-                use_convex=False,
-            )
-            self.planner.set_base_pose(robot_origion_pose)
-        else:
-            planning_world = SapienPlanningWorld(scene, [robot_entity])
-            self.planner = SapienPlanner(planning_world, move_group)
+        self.planner = mplib.Planner(
+            urdf=urdf_path,
+            srdf=srdf_path,
+            move_group=move_group,
+            user_link_names=links,
+            user_joint_names=joints,
+            use_convex=False,
+        )
+        self.planner.set_base_pose(robot_origion_pose)
 
         self.planner_type = planner_type
         self.plan_step_lim = 2500
