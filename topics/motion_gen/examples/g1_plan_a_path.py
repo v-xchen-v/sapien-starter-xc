@@ -34,6 +34,10 @@ class G1PlanningDemo(DemoSetup):
         For details on how to do this, see the sapien documentation.
         """
         super().__init__()
+        
+        # Table height configuration (in meters)
+        self.TABLE_HEIGHT = 0.60  # 60cm
+        
         # load the world, the robot, and then setup the planner.
         # See demo_setup.py for more details
         self.setup_scene()
@@ -59,26 +63,26 @@ class G1PlanningDemo(DemoSetup):
         builder.add_box_collision(half_size=[0.4, 0.4, 0.025])
         builder.add_box_visual(half_size=[0.4, 0.4, 0.025])
         table = builder.build_kinematic(name="table")
-        table.set_pose(sapien.Pose([0.56, 0, -0.025]))
+        table.set_pose(sapien.Pose([0.56, 0, self.TABLE_HEIGHT]))
 
         # boxes ankor
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=[0.02, 0.02, 0.06])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.06], material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
         red_cube = builder.build(name="red_cube")
-        red_cube.set_pose(sapien.Pose([0.4, 0.3, 0.06]))
+        red_cube.set_pose(sapien.Pose([0.4, 0.3, self.TABLE_HEIGHT + 0.025 + 0.06]))
 
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=[0.02, 0.02, 0.04])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.04], material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1]))
         green_cube = builder.build(name="green_cube")
-        green_cube.set_pose(sapien.Pose([0.2, -0.3, 0.04]))
+        green_cube.set_pose(sapien.Pose([0.2, -0.3, self.TABLE_HEIGHT + 0.025 + 0.04]))
 
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=[0.02, 0.02, 0.07])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.07], material=sapien.render.RenderMaterial(base_color=[0, 0, 1, 1]))
         blue_cube = builder.build(name="blue_cube")
-        blue_cube.set_pose(sapien.Pose([0.6, 0.1, 0.07]))
+        blue_cube.set_pose(sapien.Pose([0.6, 0.1, self.TABLE_HEIGHT + 0.025 + 0.07]))
         # boxes ankor end
 
     def setup_g1_with_omnipicker(self, robot):
@@ -121,11 +125,11 @@ class G1PlanningDemo(DemoSetup):
         the position of a box.
         Pick up the box, and set it down 0.1m to the right of its original position.
         """
-        # target poses ankor
+        # target poses ankor (adjusted for table height)
         poses = [
-            sapien.Pose([0.4, 0.3, 0.12], [0, 1, 0, 0]),
-            sapien.Pose([0.2, -0.3, 0.08], [0, 1, 0, 0]),
-            sapien.Pose([0.6, 0.1, 0.14], [0, 1, 0, 0]),
+            sapien.Pose([0.4, 0.3, self.TABLE_HEIGHT + 0.12], [0, 1, 0, 0]),   # red cube
+            sapien.Pose([0.2, -0.3, self.TABLE_HEIGHT + 0.08], [0, 1, 0, 0]),  # green cube
+            sapien.Pose([0.6, 0.1, self.TABLE_HEIGHT + 0.14], [0, 1, 0, 0]),   # blue cube
         ]
         # target poses ankor end
         # execute motion ankor
@@ -160,12 +164,12 @@ if __name__ == "__main__":
     demo = G1PlanningDemo()
     demo.demo(with_screw=False)
     
-    # # simulation loop
-    # if demo.viewer is not None:
-    #     while not demo.viewer.closed:
-    #         demo.scene.step()
-    #         demo.scene.update_render()
-    #         demo.viewer.render()
-    # else:
-    #     for _ in range(1000):
-    #         demo.scene.step()
+    # simulation loop
+    if demo.viewer is not None:
+        while not demo.viewer.closed:
+            demo.scene.step()
+            demo.scene.update_render()
+            demo.viewer.render()
+    else:
+        for _ in range(1000):
+            demo.scene.step()
