@@ -39,8 +39,8 @@ class G1PlanningDemo(DemoSetup):
         # Table position configuration (in meters)
         # Adjusted for G1 right arm reach: closer, on right side, higher
         self.TABLE_HEIGHT = 0.50  # 50cm - chest/waist level
-        self.TABLE_X_OFFSET = 0.30  # 30cm offset - closer to robot (base x ~0.4-0.6m)
-        self.TABLE_Y_OFFSET = -0.30  # -30cm - on the right side of robot
+        self.TABLE_X_OFFSET = 0.00  # 10cm offset - closer to robot (base x ~0.4-0.6m)
+        self.TABLE_Y_OFFSET = -0.70  # -80cm - on the right side of robot
         
         # load the world, the robot, and then setup the planner.
         # See demo_setup.py for more details
@@ -70,8 +70,8 @@ class G1PlanningDemo(DemoSetup):
 
         # table top
         builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=[0.4, 0.4, 0.025])
-        builder.add_box_visual(half_size=[0.4, 0.4, 0.025])
+        builder.add_box_collision(half_size=[0.3, 0.3, 0.025])
+        builder.add_box_visual(half_size=[0.3, 0.3, 0.025])
         table = builder.build_kinematic(name="table")
         table.set_pose(sapien.Pose([0.40 + self.TABLE_X_OFFSET, 0 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT]))
 
@@ -80,19 +80,19 @@ class G1PlanningDemo(DemoSetup):
         builder.add_box_collision(half_size=[0.02, 0.02, 0.06])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.06], material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
         red_cube = builder.build(name="red_cube")
-        red_cube.set_pose(sapien.Pose([0.35 + self.TABLE_X_OFFSET, -0.05 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.06]))
+        red_cube.set_pose(sapien.Pose([0.35 + self.TABLE_X_OFFSET, 0.25 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.06]))
 
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=[0.02, 0.02, 0.04])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.04], material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1]))
         green_cube = builder.build(name="green_cube")
-        green_cube.set_pose(sapien.Pose([0.45 + self.TABLE_X_OFFSET, -0.15 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.04]))
+        green_cube.set_pose(sapien.Pose([0.45 + self.TABLE_X_OFFSET, 0.15 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.04]))
 
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=[0.02, 0.02, 0.07])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.07], material=sapien.render.RenderMaterial(base_color=[0, 0, 1, 1]))
         blue_cube = builder.build(name="blue_cube")
-        blue_cube.set_pose(sapien.Pose([0.55 + self.TABLE_X_OFFSET, -0.10 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.07]))
+        blue_cube.set_pose(sapien.Pose([0.55 + self.TABLE_X_OFFSET, 0.20 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.07]))
         # boxes ankor end
 
     def setup_g1_with_omnipicker(self, robot):
@@ -140,21 +140,26 @@ class G1PlanningDemo(DemoSetup):
         # Horizontal grasp: gripper approaches from the side (left/right)
         # Quaternion [0.5, 0.5, -0.5, 0.5] represents horizontal grasp orientation
         poses = [
-            sapien.Pose([0.4 + self.TABLE_X_OFFSET, 0.3 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.12], R.from_euler('xyz', [90, -90, 0], degrees=True).as_quat()),   # red cube - horizontal grasp
-            sapien.Pose([0.2 + self.TABLE_X_OFFSET, -0.3 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.08], R.from_euler('xyz', [90, -90, 0], degrees=True).as_quat()),  # green cube - horizontal grasp
-            sapien.Pose([0.6 + self.TABLE_X_OFFSET, 0.1 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.14], R.from_euler('xyz', [90, -90, 0], degrees=True).as_quat()),   # blue cube - horizontal grasp
+            sapien.Pose([0.4 + self.TABLE_X_OFFSET, 0.6 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.12], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),   # red cube - horizontal grasp
+            sapien.Pose([0.2 + self.TABLE_X_OFFSET, 0.0 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.08], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),  # green cube - horizontal grasp
+            sapien.Pose([0.6 + self.TABLE_X_OFFSET, 0.4 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.14], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),   # blue cube - horizontal grasp
         ]
         
-        # [ 0.05057074 -0.850529    0.79031396], orientation: [-0.3529127  -0.5992464   0.61895484 -0.3650361 ]
-        target_pose = sapien.Pose(
-            p=np.array([0.05057074, -0.850529, 0.79031396]),
-            q=np.array([-0.3529127, -0.5992464, 0.61895484, -0.3650361])
-        )
-        poses = [
-            target_pose,
-            target_pose,
-            target_pose,
-        ]
+        # # ----------Debug Section -------------#
+        # # Use a reachable target to test planning and robot moving
+        # # [ 0.05057074 -0.850529    0.79031396], orientation: [-0.3529127  -0.5992464   0.61895484 -0.3650361 ]
+        # target_pose = sapien.Pose(
+        #     p=np.array([0.05057074, -0.850529, 0.79031396]),
+        #     # q=np.array([-0.3529127, -0.5992464, 0.61895484, -0.3650361])
+        #     q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()
+        # )
+        # poses = [
+        #     target_pose,
+        #     target_pose,
+        #     target_pose,
+        # ]
+        # # ----------Debug Section End---------#
+        
         # target poses ankor end
         # execute motion ankor
         for i in range(3):
