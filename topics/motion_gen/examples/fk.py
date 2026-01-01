@@ -20,9 +20,9 @@ joint_pos_dict = {
     "right_joint1": -0.1,
     "right_joint2": -0.2,
     "right_joint3": -0.3,
-    "right_joint4": -0.4,
+    "right_joint4": 1.35,
     "right_joint5": -0.5,
-    "right_joint6": -0.6,
+    "right_joint6": -1.4,
     "right_joint7": -0.7
 }
 

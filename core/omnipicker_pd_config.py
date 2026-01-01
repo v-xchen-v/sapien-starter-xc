@@ -118,10 +118,13 @@ def initialize_omnipicker_qpos(
         joint_name = joint.get_name()
         if joint_name in mimic_multipliers:
             qpos.append(gripper_value * mimic_multipliers[joint_name])
-        else:
+            joint.set_drive_target(gripper_value * mimic_multipliers[joint_name])
+        elif "gripper_joint" in joint_name:
             qpos.append(0.0)
+            joint.set_drive_target(0.0)
     
-    robot.set_qpos(qpos)
+    # robot.set_qpos(qpos)
+
 
 
 # Preset configurations for common use cases

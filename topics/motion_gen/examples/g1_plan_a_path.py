@@ -38,9 +38,11 @@ class G1PlanningDemo(DemoSetup):
         
         # Table position configuration (in meters)
         # Adjusted for G1 right arm reach: closer, on right side, higher
-        self.TABLE_HEIGHT = 0.50  # 50cm - chest/waist level
-        self.TABLE_X_OFFSET = 0.00  # 10cm offset - closer to robot (base x ~0.4-0.6m)
-        self.TABLE_Y_OFFSET = -0.70  # -80cm - on the right side of robot
+        
+        # let table centered [0.33, -0.36, 0.73]
+        self.TABLE_HEIGHT = 0.60  # 50cm - chest/waist level
+        self.TABLE_X_OFFSET = 0.10  # 10cm offset - closer to robot (base x ~0.4-0.6m)
+        self.TABLE_Y_OFFSET = -0.45  # -80cm - on the right side of robot
         
         # load the world, the robot, and then setup the planner.
         # See demo_setup.py for more details
@@ -58,41 +60,36 @@ class G1PlanningDemo(DemoSetup):
         print(f"Move group joint indices: {self.planner.move_group_joint_indices}")
         print(f"Total joints in move group: {len(self.planner.move_group_joint_indices)}")
         
-        self.setup_g1_with_omnipicker(self.robot)
+        _, dual_arm_mimic_multipliers = self.setup_g1_with_omnipicker(self.robot)
+        self.dual_arm_mimic_multipliers = dual_arm_mimic_multipliers
         
-        # Set initial joint positions for G1 robot
-        # G1 has many joints, we'll set a neutral pose
-        # This is a simplified initialization - adjust based on your robot's actual DOFs
-        init_qpos = np.zeros(len(self.robot.get_active_joints()))
-        self.robot.set_qpos(init_qpos)
-        for joint, q in zip(self.active_joints, init_qpos):
-            joint.set_drive_target(q)
 
         # table top
         builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=[0.3, 0.3, 0.025])
-        builder.add_box_visual(half_size=[0.3, 0.3, 0.025])
+        builder.add_box_collision(half_size=[0.4, 0.3, 0.025])
+        builder.add_box_visual(half_size=[0.4, 0.3, 0.025])
         table = builder.build_kinematic(name="table")
-        table.set_pose(sapien.Pose([0.40 + self.TABLE_X_OFFSET, 0 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT]))
+        table.set_pose(sapien.Pose([0.60 + self.TABLE_X_OFFSET, 0 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT]))
 
-        # boxes ankor
-        builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=[0.02, 0.02, 0.06])
-        builder.add_box_visual(half_size=[0.02, 0.02, 0.06], material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
-        red_cube = builder.build(name="red_cube")
-        red_cube.set_pose(sapien.Pose([0.35 + self.TABLE_X_OFFSET, 0.25 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.06]))
+        # # boxes ankor
+        # builder = self.scene.create_actor_builder()
+        # builder.add_box_collision(half_size=[0.02, 0.02, 0.06])
+        # builder.add_box_visual(half_size=[0.02, 0.02, 0.06], material=sapien.render.RenderMaterial(base_color=[1, 0, 0, 1]))
+        # red_cube = builder.build(name="red_cube")
+        # red_cube.set_pose(sapien.Pose([0.35 + self.TABLE_X_OFFSET, 0.25 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.06]))
 
         builder = self.scene.create_actor_builder()
         builder.add_box_collision(half_size=[0.02, 0.02, 0.04])
-        builder.add_box_visual(half_size=[0.02, 0.02, 0.04], material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1]))
+        builder.add_box_visual(half_size=[0.02, 0.02, 0.04], material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1])) # green
         green_cube = builder.build(name="green_cube")
-        green_cube.set_pose(sapien.Pose([0.45 + self.TABLE_X_OFFSET, 0.15 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.04]))
+        # put the green cube to [0.33, -0.36, 0.73]
+        green_cube.set_pose(sapien.Pose([0.35 , -0.25, 0.73]))
 
-        builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=[0.02, 0.02, 0.07])
-        builder.add_box_visual(half_size=[0.02, 0.02, 0.07], material=sapien.render.RenderMaterial(base_color=[0, 0, 1, 1]))
-        blue_cube = builder.build(name="blue_cube")
-        blue_cube.set_pose(sapien.Pose([0.55 + self.TABLE_X_OFFSET, 0.20 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.07]))
+        # builder = self.scene.create_actor_builder()
+        # builder.add_box_collision(half_size=[0.02, 0.02, 0.07])
+        # builder.add_box_visual(half_size=[0.02, 0.02, 0.07], material=sapien.render.RenderMaterial(base_color=[0, 0, 1, 1]))
+        # blue_cube = builder.build(name="blue_cube")
+        # blue_cube.set_pose(sapien.Pose([0.55 + self.TABLE_X_OFFSET, 0.20 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.07]))
         # boxes ankor end
 
     def setup_g1_with_omnipicker(self, robot):
@@ -115,9 +112,6 @@ class G1PlanningDemo(DemoSetup):
         for joint_name in sorted(dualarm_mimic_multipliers.keys()):
             print(f"  {joint_name}: {dualarm_mimic_multipliers[joint_name]}")
         
-        # Initialize joint positions (all at 0, gripper closed)
-        initialize_omnipicker_qpos(robot, dualarm_mimic_multipliers, gripper_value=0.0)
-        print(f"\n=== Initial qpos ===\n{robot.get_qpos()}")
         
         # Set drive properties using the modular configuration
         print("\n=== Setting Drive Properties ===")
@@ -127,6 +121,20 @@ class G1PlanningDemo(DemoSetup):
             **PDConfig.STABLE_G1_GRIPPER
         )
         
+        # Initialize joint positions (all at 0, gripper closed)
+        initialize_omnipicker_qpos(robot, dualarm_mimic_multipliers, gripper_value=0.8)
+        print(f"\n=== Initial qpos ===\n{robot.get_qpos()}")
+        
+        for joint in self.active_joints:
+            joint_name = joint.get_name()
+            if joint_name in ["body_joint1", "body_joint2",
+                              "right_joint1", "right_joint2", "right_joint3",
+                              "right_joint4", "right_joint5", "right_joint6", "right_joint7",
+                              "left_joint1", "left_joint2", "left_joint3",
+                              "left_joint4", "left_joint5", "left_joint6", "left_joint7",
+                              "head_joint1", "head_joint2"]:
+                joint.set_drive_target(0)
+                
         return robot, dualarm_mimic_multipliers
 
     def demo(self, with_screw=True):
@@ -140,18 +148,25 @@ class G1PlanningDemo(DemoSetup):
         # Horizontal grasp: gripper approaches from the side (left/right)
         # Quaternion [0.5, 0.5, -0.5, 0.5] represents horizontal grasp orientation
         poses = [
-            sapien.Pose([0.4 + self.TABLE_X_OFFSET, 0.6 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.12], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),   # red cube - horizontal grasp
-            sapien.Pose([0.2 + self.TABLE_X_OFFSET, 0.0 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.08], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),  # green cube - horizontal grasp
-            sapien.Pose([0.6 + self.TABLE_X_OFFSET, 0.4 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.14], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),   # blue cube - horizontal grasp
+            # sapien.Pose([0.35, -0.45, 0.585 + 0.12], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),   # red cube - horizontal grasp
+            sapien.Pose([0.33, -0.36, 0.73], q=[0.54137164, -0.8286732,  -0.07304602, -0.12199078]),  # green cube - horizontal grasp
+            # sapien.Pose([0.33, -0.36, 0.63], q=[0.54137164, -0.8286732,  -0.07304602, -0.12199078]),  # green cube - horizontal grasp
+            # sapien.Pose([0.6 + self.TABLE_X_OFFSET, 0.4 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.14], q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()),   # blue cube - horizontal grasp
         ]
         
         # # ----------Debug Section -------------#
         # # Use a reachable target to test planning and robot moving
         # # [ 0.05057074 -0.850529    0.79031396], orientation: [-0.3529127  -0.5992464   0.61895484 -0.3650361 ]
         # target_pose = sapien.Pose(
-        #     p=np.array([0.05057074, -0.850529, 0.79031396]),
-        #     # q=np.array([-0.3529127, -0.5992464, 0.61895484, -0.3650361])
-        #     q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat()
+        #     p=np.array([0.05057074, -0.850529 , 0.79031396]),
+        #     q=np.array([-0.3529127,  -0.5992464,   0.61895484, -0.3650361])  # horizontal grasp
+        #     # q=R.from_euler('xyz', [-90, 0, 180], degrees=True).as_quat() # vertical grasp
+        # )
+        
+        # # End-effector position: [ 0.32588023 -0.36612436  0.7335977 ], orientation: [ 0.54137164 -0.8286732  -0.07304602 -0.12199078]
+        # target_pose = sapien.Pose(
+        #     p=np.array([0.32588023, -0.36612436,  0.7335977]),
+        #     q=np.array([0.54137164, -0.8286732,  -0.07304602, -0.12199078])  # horizontal grasp
         # )
         # poses = [
         #     target_pose,
@@ -162,32 +177,67 @@ class G1PlanningDemo(DemoSetup):
         
         # target poses ankor end
         # execute motion ankor
-        for i in range(3):
+        for i in range(1):
             pose = poses[i]
             # Approach position (from the side for horizontal grasp)
             p = pose.p.copy()
-            p[1] += 0.15  # Approach from the side (Y direction) instead of from above
+            p[1] += 0.0  # Approach from the side (Y direction) instead of from above
             self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
-            self.open_gripper()
-            # Move in to grasp (horizontal approach)
-            p[1] -= 0.10
-            self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
-            self.close_gripper()
-            # Retract after grasp
-            p[1] -= 0.05
-            self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
-            # Move to the right
-            p[0] += 0.1
-            self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
-            # Move in to place
-            p[1] += 0.05
-            self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
-            self.open_gripper()
-            # Retract after placing
-            p[1] += 0.10
-            self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
+            self.set_gripper(0.3) # close gripper
+            
+            p  = pose.p.copy()
+            p[2] += 0.1  # Lift up after grasp
+            self.move_to_pose_g1(sapien.Pose(p, pose.q), True)
+            # self.open_gripper()
+            # # Move in to grasp (horizontal approach)
+            # p[1] -= 0.0
+            # self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
+            # # Retract after grasp
+            # p[1] -= 0.0
+            # self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
+            # # Move to the right
+            # p[0] += 0.0
+            # self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
+            # # Move in to place
+            # p[1] += 0.0
+            # self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
+            # self.open_gripper()
+            # # Retract after placing
+            # p[1] += 0.0
+            # self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
         # execute motion ankor end
     
+    # follow path ankor end
+    def set_gripper(self, pos):
+        """
+        Helper function to activate gripper joints
+        Args:
+            pos: position of the gripper joint in real number
+        """
+        initialize_omnipicker_qpos(self.robot, self.dual_arm_mimic_multipliers, gripper_value=pos)
+        
+        # get current qpos of "right_gripper_joint" named joint
+        qpos = self.robot.get_qpos()
+        curr_gripper_value = 0.0
+        for j, joint in enumerate(self.active_joints):
+            if joint.get_name()  == "right_gripper_joint":
+                curr_gripper_value = qpos[j]
+                break
+        print(f"[DEBUG] Current gripper joint value: {curr_gripper_value}, Target: {pos}")
+        
+        # linear from curr_gripper_value to pos
+        # 100 steps is plenty to reach the target position
+        steps = 100
+        for i in range(steps):
+            intermediate_value = curr_gripper_value + (pos - curr_gripper_value) * (i + 1) / steps
+            initialize_omnipicker_qpos(self.robot, self.dual_arm_mimic_multipliers, gripper_value=intermediate_value)
+            print(f"[DEBUG] Step {i+1}/{steps}, Setting gripper to {intermediate_value}")
+            self.scene.step()
+            if i % 4 == 0:
+                self.scene.update_render()
+                self.viewer.render()
+    
+                
     def move_to_pose_g1(self, pose, with_screw=True, ik_threshold=0.1):
         """
         Move to pose with loosened tolerance for IK.
@@ -230,7 +280,7 @@ class G1PlanningDemo(DemoSetup):
             
             
         result = self.planner.plan_pose(pose, self.robot.get_qpos(), time_step=1 / 250,
-                                        mask=mask)
+                                        mask=mask, planning_time=5)
         
 
         
@@ -261,6 +311,13 @@ class G1PlanningDemo(DemoSetup):
                 "right_joint6",
                 "right_joint7",
             ]
+            
+            # Apply passive force compensation
+            qf = robot.compute_passive_force(
+                gravity=True, coriolis_and_centrifugal=True
+            )
+            robot.set_qf(qf)
+            
             for joint in robot.get_active_joints():
                 if joint.get_name() in joint_names:
                     joint_idx = joint_names.index(joint.get_name())
@@ -294,7 +351,7 @@ class G1PlanningDemo(DemoSetup):
             return 0
         else:
             print("Screw motion planning failed, fall back to RRTConnect with loose tolerance")
-            return self.move_to_pose_with_RRTConnect_loose(pose, ik_threshold)
+            return self.move_to_pose_with_RRTConnect_g1(pose, ik_threshold)
 
 
 if __name__ == "__main__":
