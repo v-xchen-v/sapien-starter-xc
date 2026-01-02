@@ -46,8 +46,8 @@ def set_g1_omnipicker_drive_properties(
     gripper_mimic_multipliers: Dict[str, float],
     gripper_mimic_stiffness: float = 1000.0,
     gripper_mimic_damping: float = 0.0,
-    gripper_master_stiffness: float = 100.0,
-    gripper_master_damping: float = 10.0,
+    gripper_master_stiffness: float = 2000.0,
+    gripper_master_damping: float = 100.0,
     arm_stiffness: float = 2000.0,
     arm_damping: float = 100.0,
     arm_force_limit: Optional[float] = None
@@ -83,7 +83,8 @@ def set_g1_omnipicker_drive_properties(
             # Master gripper joint
             joint.set_drive_properties(
                 stiffness=gripper_master_stiffness,
-                damping=gripper_master_damping
+                damping=gripper_master_damping,
+                force_limit=200.0
             )
         else:
             # Arm joints: normal PD control

@@ -47,6 +47,13 @@ class G1PlanningDemo(DemoSetup):
         # load the world, the robot, and then setup the planner.
         # See demo_setup.py for more details
         self.setup_scene()
+        
+        # enable ccd
+        config = sapien.physx.PhysxSceneConfig()
+        config.enable_ccd = True
+        sapien.physx.set_scene_config(config)
+        
+
         self.load_robot(urdf_path="robot_descriptions/AgiBot/g1_omnipicker/agibot_g1_with_omnipicker.urdf")
         self.setup_planner(
             urdf_path="robot_descriptions/AgiBot/g1_omnipicker/agibot_g1_with_omnipicker.urdf",
@@ -78,12 +85,23 @@ class G1PlanningDemo(DemoSetup):
         # red_cube = builder.build(name="red_cube")
         # red_cube.set_pose(sapien.Pose([0.35 + self.TABLE_X_OFFSET, 0.25 + self.TABLE_Y_OFFSET, self.TABLE_HEIGHT + 0.025 + 0.06]))
 
+
+        # set friction for boxes
+        # Create a "sticky" material: high static (1.0+) and dynamic friction
+        sticky_material = self.scene.create_physical_material(
+            static_friction=2.0, 
+            dynamic_friction=2.0, 
+            restitution=0.0  # No bounciness
+        )
+
         builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=[0.02, 0.02, 0.04])
+        builder.add_box_collision(half_size=[0.02, 0.02, 0.04], material=sticky_material)
         builder.add_box_visual(half_size=[0.02, 0.02, 0.04], material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1])) # green
+
         green_cube = builder.build(name="green_cube")
         # put the green cube to [0.33, -0.36, 0.73]
-        green_cube.set_pose(sapien.Pose([0.35 , -0.25, 0.73]))
+        green_cube.set_pose(sapien.Pose([0.35 , -0.23, 0.73]))
+
 
         # builder = self.scene.create_actor_builder()
         # builder.add_box_collision(half_size=[0.02, 0.02, 0.07])
@@ -183,11 +201,46 @@ class G1PlanningDemo(DemoSetup):
             p = pose.p.copy()
             p[1] += 0.0  # Approach from the side (Y direction) instead of from above
             self.move_to_pose_g1(sapien.Pose(p, pose.q), with_screw)
-            self.set_gripper(0.3) # close gripper
+            self.set_gripper(0.2) # close gripper
             
-            p  = pose.p.copy()
-            p[2] += 0.1  # Lift up after grasp
-            self.move_to_pose_g1(sapien.Pose(p, pose.q), True)
+            # p  = pose.p.copy()
+            # p[2] += 0.1  # Lift up after grasp
+            # self.move_to_pose_g1(sapien.Pose(p))
+            # set "right_joint6" to -1.74 rad to lift up the arm
+
+            for i in range(100):
+                self.scene.step()
+                self.scene.update_render()
+                self.viewer.render()
+
+            # set joint targets directly for lifting by interpolation
+            current_qpos = self.robot.get_qpos().copy()
+            target_qpos = current_qpos.copy()
+            target_qpos_right_joint6 = -1.70  # lift up
+            steps = 200
+            for i in range(steps):
+                for j, joint in enumerate(self.active_joints):
+                    if joint.get_name() == "right_joint6":
+                        intermediate_value = current_qpos[j] + (target_qpos_right_joint6 - current_qpos[j]) * (i + 1) / steps
+                        print(f"[DEBUG] Setting right_joint6 to {intermediate_value}")
+                        joint.set_drive_target(intermediate_value)
+                    if joint.get_name() == "right_gripper_joint":
+                        target_qpos[j] = 0.2  # keep gripper closed
+                        joint.set_drive_target(target_qpos[j])
+                        print(f"[DEBUG] Keeping right_gripper_joint at {target_qpos[j]}")
+                self.scene.step()
+                if i % 4 == 0:
+                    self.scene.update_render()
+                    self.viewer.render()
+                    # print 'right_gripper_joint' current value
+                    qpos = self.robot.get_qpos()
+                    for j, joint in enumerate(self.active_joints):
+                        if joint.get_name()  == "right_gripper_joint":
+                            curr_gripper_value = qpos[j]
+                            print(f"[DEBUG] Current right_gripper_joint value: {curr_gripper_value}")
+                            break
+
+            
             # self.open_gripper()
             # # Move in to grasp (horizontal approach)
             # p[1] -= 0.0
