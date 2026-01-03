@@ -19,7 +19,43 @@ from core.omnipicker_pd_config import (
     PDConfig
 )
 
+def print_actor_collision_info(actor):
+    """Utility function to print collision shape and material info of an actor."""
+    print(f"--- Inspecting Actor: {actor.name} ---")
 
+    # 1. Get all collision shapes (an actor can have multiple)
+    collision_shapes = actor.find_component_by_type(
+        sapien.physx.PhysxRigidBaseComponent
+    ).get_collision_shapes()
+
+    if not collision_shapes:
+        print("This actor has NO collision shapes (it might be visual-only or a ghost).")
+
+    for i, shape in enumerate(collision_shapes):
+        # 2. Get the physical material
+        mat = shape.get_physical_material()
+        
+        # 3. Print properties
+        print(f"Shape {i}:")
+        print(f"  - Static Friction:  {mat.static_friction}")
+        print(f"  - Dynamic Friction: {mat.dynamic_friction}")
+        print(f"  - Restitution (Bounciness): {mat.restitution}")
+
+def print_robot_collision_info(robot):
+    # Apply to Robot Gripper Fingers (iterate through your robot links)
+    for link in robot.get_links():
+        if "narrow" in link.name or "wide" in link.name:
+            for i, shape in enumerate(link.get_collision_shapes()):
+                if not shape:
+                    print(f"Link {link.name} has NO collision shapes.")
+                    continue
+
+                
+                mat = shape.get_physical_material()
+                print(f"Link {link.name}, Shape {i}:")
+                print(f"  - Static Friction:  {mat.static_friction}")
+                print(f"  - Dynamic Friction: {mat.dynamic_friction}")
+                print(f"  - Restitution (Bounciness): {mat.restitution}")
 
 
 class G1PlanningDemo(DemoSetup):
@@ -89,19 +125,49 @@ class G1PlanningDemo(DemoSetup):
         # set friction for boxes
         # Create a "sticky" material: high static (1.0+) and dynamic friction
         sticky_material = self.scene.create_physical_material(
-            static_friction=2.0, 
-            dynamic_friction=2.0, 
+            static_friction=1.0, 
+            dynamic_friction=1.0, 
             restitution=0.0  # No bounciness
         )
 
         builder = self.scene.create_actor_builder()
-        builder.add_box_collision(half_size=[0.02, 0.02, 0.04], material=sticky_material)
+        # builder.add_box_collision(half_size=[0.02, 0.02, 0.04], material=sticky_material)
+        builder.add_box_collision(half_size=[0.02, 0.02, 0.04])
         builder.add_box_visual(half_size=[0.02, 0.02, 0.04], material=sapien.render.RenderMaterial(base_color=[0, 1, 0, 1])) # green
 
         green_cube = builder.build(name="green_cube")
         # put the green cube to [0.33, -0.36, 0.73]
         green_cube.set_pose(sapien.Pose([0.35 , -0.23, 0.73]))
 
+        print(f"--- Inspecting Actor: {green_cube.name} ---")
+
+        # 1. Get all collision shapes (an actor can have multiple)
+        collision_shapes = green_cube.find_component_by_type(
+            sapien.physx.PhysxRigidBaseComponent
+        ).get_collision_shapes()
+
+        if not collision_shapes:
+            print("This actor has NO collision shapes (it might be visual-only or a ghost).")
+
+        for i, shape in enumerate(collision_shapes):
+            # 2. Get the physical material
+            mat = shape.get_physical_material()
+            
+            # 3. Print properties
+            print(f"Shape {i}:")
+            print(f"  - Static Friction:  {mat.static_friction}")
+            print(f"  - Dynamic Friction: {mat.dynamic_friction}")
+            print(f"  - Restitution (Bounciness): {mat.restitution}")
+            print("If you see 0.3 or 0.5: This is the SAPIEN/PhysX default. It is usually too low for grasping rigid objects without slip")
+            """
+            --- Inspecting Actor: green_cube ---
+            Shape 0:
+            - Static Friction:  0.30000001192092896
+            - Dynamic Friction: 0.30000001192092896
+            - Restitution (Bounciness): 0.10000000149011612
+            """
+        print_robot_collision_info(self.robot)
+        pass
 
         # builder = self.scene.create_actor_builder()
         # builder.add_box_collision(half_size=[0.02, 0.02, 0.07])
@@ -193,6 +259,8 @@ class G1PlanningDemo(DemoSetup):
         # ]
         # # ----------Debug Section End---------#
         
+        import time
+        time.sleep(3)  # wait a bit before starting motion
         # target poses ankor end
         # execute motion ankor
         for i in range(1):
