@@ -5,21 +5,27 @@ import numpy as np
 # Load robot in SAPIEN
 scene = sapien.Scene()
 loader = scene.create_urdf_loader()
-robot = loader.load("robot_descriptions/Panda/panda.urdf")  # Replace with your URDF path
+robot = loader.load("robot_descriptions/AgiBot/g1_omnipicker/agibot_g1_with_omnipicker.urdf")  # Replace with your URDF path
 
 # Create mplib planner
 planner = mplib.Planner(
-    urdf="robot_descriptions/Panda/panda.urdf",
-    srdf="robot_descriptions/Panda/panda.srdf",  # Specifies collision pairs to ignore
-    user_link_names=[link.get_name() for link in robot.get_links()],
-    user_joint_names=[joint.get_name() for joint in robot.get_active_joints()],
-    move_group="panda_hand",  # End-effector link
-    joint_vel_limits=np.ones(7),  # Max joint velocities
-    joint_acc_limits=np.ones(7)   # Max joint accelerations
+    urdf="robot_descriptions/AgiBot/g1_omnipicker/agibot_g1_with_omnipicker.urdf",
+    srdf="robot_descriptions/AgiBot/g1_omnipicker/agibot_g1_with_omnipicker_mplib.srdf",  # Specifies collision pairs to ignore
+    # user_link_names=[link.get_name() for link in robot.get_links()],
+    # user_joint_names=[joint.get_name() for joint in robot.get_active_joints()],
+    move_group="arm_r_end_link",  # End-effector link
+    # joint_vel_limits=np.ones(7),  # Max joint velocities
+    # joint_acc_limits=np.ones(7)   # Max joint accelerations
 )
 
+
+# Q: 
+# [ 0.1813371  -0.88947874  1.1112494 ], orientation: [-0.11063321 -0.10008828 -0.6670661   0.7299078 ]
 # Define target pose [x, y, z, qw, qx, qy, qz] in robot base frame
-target_pose = mplib.Pose([0.4, 0.0, 0.5], [1, 0, 0, 0])
+target_pose = sapien.Pose(
+    p=np.array([0.1813371, -0.88947874, 1.1112494]),
+    q=np.array([-0.11063321, -0.10008828, -0.6670661, 0.7299078])
+)
 
 # Get current joint positions
 current_qpos = robot.get_qpos()
@@ -32,6 +38,14 @@ result = planner.plan_pose(
     rrt_range=0.1,      # RRT sampling range
     planning_time=1.0   # Time limit for planning
 )
+
+# Print Move group joint indices and names
+# for move_group_joint_idx in planner.move_group_joint_indices:
+#     joint_names = [joint.get_name() for joint in robot.get_active_joints()]
+#     print(f"Joint index: {move_group_joint_idx}, name: {joint_names[move_group_joint_idx]}")
+    
+for move_group_joint_idx in planner.move_group_joint_indices:
+    print(f"Joint index: {move_group_joint_idx}, name: {planner.user_joint_names[move_group_joint_idx]}")
 
 if result['status'] == "Success":
     print(f"Path found! Duration: {result['duration']:.2f}s")
